@@ -38,7 +38,7 @@ class AuthenticatedSessionController extends Controller
             if (! $user || ! Hash::check($credentials['password'], $user->password)) {
                 event(new Failed('web', $user, $credentials));
 
-                throw ValidationException::withMessages(['email' => __('auth.failed')]);
+                throw ValidationException::withMessages(['email' => __(key: 'auth.failed', locale: 'pt_BR')]);
             }
 
             if (config('hashing.rehash_on_login', true) && Hash::needsRehash($user->password)) {
@@ -50,8 +50,10 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->forget(['login.id', 'login.remember']);
 
-        if (Features::enabled(Features::twoFactorAuthentication()) && $user->two_factor_secret
-            && (! Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm') || $user->two_factor_confirmed_at)) {
+        if (
+            Features::enabled(Features::twoFactorAuthentication()) && $user->two_factor_secret
+            && (! Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm') || $user->two_factor_confirmed_at)
+        ) {
             $request->session()->regenerate();
             $request->session()->put([
                 'login.id' => $user->getKey(),
