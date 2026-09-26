@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;
@@ -76,11 +77,45 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_login_routes_use_the_application_controller(): void
+    {
+        foreach (['login' => 'create', 'login.store' => 'store', 'logout' => 'destroy'] as $name => $method) {
+            $this->assertSame(
+                AuthenticatedSessionController::class . '@' . $method,
+                app('router')->getRoutes()->getByName($name)->getActionName(),
+            );
+        }
+    }
+
+    public function test_login_requires_valid_credentials(): void
+    {
+        $this->post(route('login.store'), ['email' => 'invalid'])
+            ->assertSessionHasErrors(['email', 'password']);
+
+        $this->assertGuest();
+    }
+
+    public function test_login_normalizes_email_and_remembers_the_user(): void
+    {
+        $user = User::factory()->create();
+
+        $this->withSession(['url.intended' => '/settings/profile'])
+            ->post(route('login.store'), [
+                'email' => ' ' . strtoupper($user->email) . ' ',
+                'password' => 'password',
+                'remember' => 'on',
+            ])
+            ->assertRedirect('/settings/profile')
+            ->assertCookie(auth()->guard('web')->getRecallerName());
+
+        $this->assertAuthenticatedAs($user);
+    }
+
     public function test_users_are_rate_limited()
     {
         $user = User::factory()->create();
 
-        RateLimiter::increment(md5('login'.implode('|', [$user->email, '127.0.0.1'])), amount: 5);
+        RateLimiter::increment(md5('login' . implode('|', [$user->email, '127.0.0.1'])), amount: 5);
 
         $response = $this->post(route('login.store'), [
             'email' => $user->email,
