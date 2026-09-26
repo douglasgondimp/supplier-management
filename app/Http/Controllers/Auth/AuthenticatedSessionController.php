@@ -50,29 +50,10 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->forget(['login.id', 'login.remember']);
 
-        if (
-            Features::enabled(Features::twoFactorAuthentication()) && $user->two_factor_secret
-            && (! Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm') || $user->two_factor_confirmed_at)
-        ) {
-            $request->session()->regenerate();
-            $request->session()->put([
-                'login.id' => $user->getKey(),
-                'login.remember' => $request->boolean('remember'),
-            ]);
-
-            TwoFactorAuthenticationChallenged::dispatch($user);
-
-            return $request->wantsJson()
-                ? response()->json(['two_factor' => true])
-                : to_route('two-factor.login');
-        }
-
         Auth::guard('web')->login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 
-        return $request->wantsJson()
-            ? response()->json(['two_factor' => false])
-            : redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->intended(route('dashboard', absolute: false));
     }
 
     public function destroy(Request $request): RedirectResponse
