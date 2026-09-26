@@ -20,12 +20,16 @@ defineProps<{
 <template>
     <Form v-bind="store.form()" :reset-on-success="['password']" v-slot="{ errors, processing }"
         class="flex flex-col gap-6">
+
+        <div v-if="errors.email" class="mb-4 text-center text-sm font-medium bg-red-200 p-3">
+            <InputError :message="errors.email" />
+        </div>
+
         <div class="grid gap-6">
             <div class="grid gap-2">
                 <Label for="email">Email</Label>
                 <Input id="email" type="email" name="email" required v-focus :tabindex="1" autocomplete="email"
                     placeholder="email@example.com" />
-                <InputError :message="errors.email" />
             </div>
 
             <div class="grid gap-2">
