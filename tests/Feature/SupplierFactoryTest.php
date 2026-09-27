@@ -46,10 +46,9 @@ class SupplierFactoryTest extends TestCase
     {
         foreach ([SupplierEmail::class, SupplierPhones::class, SupplierContact::class] as $model) {
             $record = $model::factory()->create();
-            $relation = $record instanceof SupplierPhones ? 'supplier' : 'suppliers';
 
-            $this->assertNotNull($record->{$relation});
-            $this->assertSame($record->supplier_id, $record->{$relation}->id);
+            $this->assertNotNull($record->supplier, "A relação suppliers não foi encontrada em {$model}");
+            $this->assertSame($record->supplier_id, $record->supplier->id);
             $this->assertTrue($record->fresh()->is($record));
         }
     }

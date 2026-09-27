@@ -31,8 +31,8 @@ class SupplierEmail extends Model
         ];
     }
 
-    public function suppliers(): BelongsTo
+    public function supplier(): BelongsTo
     {
-        return $this->belongsTo(Supplier::class, 'supplier_id');
+        return $this->belongsTo(Supplier::class);
     }
 }
