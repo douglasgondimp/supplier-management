@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use App\Enums\EmailType;
+use App\Enums\PhoneType;
 use Database\Factories\SupplierContactFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,12 +15,12 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property int $supplier_id
- * @property int $name
+ * @property string $name
  * @property int|null $company
  * @property int|null $position
- * @property int $phone_number
- * @property int $phone_type
- * @property int|null $email
+ * @property string $phone_number
+ * @property PhoneType $phone_type
+ * @property string|null $email
  * @property EmailType|null $email_type
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -33,7 +35,15 @@ class SupplierContact extends Model
     {
         return [
             'email_type' => EmailType::class,
+            'phone_type' => PhoneType::class
         ];
+    }
+
+    protected function phoneNumber(): Attribute
+    {
+        return Attribute::make(
+            set: fn(string $value) => preg_replace('/[^0-9]/', '', $value)
+        );
     }
 
     public function suppliers(): BelongsTo

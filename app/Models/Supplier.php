@@ -6,6 +6,7 @@ use App\Enums\PersonType;
 use App\Enums\PhoneType;
 use Database\Factories\SupplierFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -49,6 +50,20 @@ class Supplier extends Model
             'phone_type' => PhoneType::class,
             'has_condominium' => 'boolean',
         ];
+    }
+
+    protected function phoneNumber(): Attribute
+    {
+        return Attribute::make(
+            set: fn(string $value) => preg_replace('/[^0-9]/', '', $value)
+        );
+    }
+
+    protected function zipAddress(): Attribute
+    {
+        return Attribute::make(
+            set: fn(string $value) => preg_replace('/[^0-9]/', '', $value)
+        );
     }
 
     public function individual(): HasOne
