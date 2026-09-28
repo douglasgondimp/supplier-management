@@ -1,74 +1,75 @@
-# Supplier Management
+# Instalação — Supplier Management
 
-Projeto Laravel com Vue, TypeScript e Inertia, iniciado a partir do [starter kit oficial](https://github.com/laravel/vue-starter-kit). Inclui as telas de autenticação do starter kit.
+## Pré-requisitos
 
-## Desenvolvimento com Docker
+- Git.
+- Docker Engine ou Docker Desktop com Docker Compose v2 e acesso ao daemon pelo seu usuário.
+- Portas `8000` e `5173` disponíveis.
+- Conexão com a internet para baixar imagens e dependências.
 
-Pré-requisitos: Docker Engine ou Docker Desktop com Docker Compose e acesso ao daemon Docker pelo seu usuário. Não é necessário instalar PHP, Composer ou Node no computador. No Windows, execute os comandos pelo WSL2.
+No Windows, execute os comandos pelo WSL2. PHP, Composer, Node.js e MySQL são fornecidos pelos containers.
 
-Na primeira execução:
+## 1. Obter o projeto
+
+```sh
+git clone https://github.com/douglasgondimp/supplier-management.git
+cd supplier-management
+```
+
+Se já tiver o repositório, acesse sua pasta e siga para a próxima etapa.
+
+## 2. Preparar o ambiente
+
+Na raiz do projeto, execute com seu usuário normal, sem `sudo`:
 
 ```sh
 sh docker/setup.sh
 ```
 
-O script copia `.env.example` se necessário, constrói a imagem com PHP 8.4, Composer e Node 24, instala as dependências, gera a chave da aplicação, inicia o MySQL 8.4, executa as migrations e sobe os serviços. As dependências ficam em `vendor/` e `node_modules/` na pasta do projeto. Os arquivos são criados com o usuário que executou o script; não execute com `sudo`.
+O script cria o `.env` a partir de `.env.example`, caso ele não exista, e prepara o ambiente local com PHP 8.4, Composer 2, Node.js 24 e MySQL 8.4. Também instala as dependências, gera a chave da aplicação, executa as migrations, cria o link de armazenamento e inicia a aplicação, o Vite e o worker de filas.
 
-Acesse **http://localhost:8000**. O Vite usa a porta **5173** para atualizar o frontend automaticamente enquanto você edita os arquivos. Abra a aplicação pela porta 8000.
+O `.env.example` já contém a configuração de conexão com o MySQL do Docker:
 
-Serviços:
-
-| Serviço | Função                                          |
-| ------- | ----------------------------------------------- |
-| `app`   | Servidor de desenvolvimento Laravel             |
-| `vite`  | Vue/Inertia com atualização automática          |
-| `queue` | Processamento das filas do Laravel              |
-| `mysql` | Banco MySQL com volume persistente `mysql-data` |
-
-O Laravel conecta ao banco pelo endereço `mysql:3306`, usando as variáveis `DB_*` do `.env`. O banco fica acessível pela rede interna do Docker. As senhas de exemplo são apenas para desenvolvimento local. Alterar as credenciais no `.env` depois da criação do volume não altera os usuários já existentes no MySQL.
-
-## Comandos úteis
-
-```sh
-# Iniciar novamente após a instalação
-docker compose up -d
-
-# Acompanhar os logs
-docker compose logs -f app vite queue
-
-# Executar migrations ou comandos Artisan
-docker compose exec app php artisan migrate
-docker compose exec app php artisan tinker
-
-# Instalar dependências
-docker compose exec app composer require nome/pacote
-docker compose exec vite npm install nome-do-pacote
-
-# Compilar o frontend e executar os testes do starter kit
-docker compose exec vite npm run build
-docker compose exec app php artisan test
-
-# Reiniciar o worker após alterar código de jobs
-docker compose restart queue
-
-# Encerrar preservando o banco
-docker compose down
+```dotenv
+APP_URL=http://localhost:8000
+DB_CONNECTION=mysql
+DB_HOST=mysql
+DB_PORT=3306
+DB_DATABASE=supplier_management
+DB_USERNAME=supplier
+DB_PASSWORD=local_password
+MYSQL_ROOT_PASSWORD=local_root_password
 ```
 
-Os testes usam SQLite em memória, separado do MySQL de desenvolvimento. A imagem inclui os dois drivers.
+Se já houver um `.env`, confira esses valores antes de executar o script. Para personalizar as credenciais, copie `.env.example` para `.env` e edite os valores antes da primeira instalação. Alterar as credenciais no arquivo após a criação do banco não atualiza os usuários existentes no MySQL.
 
-`docker compose down -v` também **apaga os dados do banco**. Use apenas se quiser recriar o ambiente sem os dados anteriores.
+## 3. Popular o banco
 
-Se mudar o Dockerfile, execute novamente `sh docker/setup.sh`. Se as portas 8000 ou 5173 estiverem ocupadas, libere-as antes de iniciar. Ao personalizar as portas, mantenha `compose.yaml`, `APP_URL` e as opções `server` de `vite.config.ts` alinhadas. Em ambientes WSL2 com problemas de atualização automática, mantenha o projeto no sistema de arquivos Linux.
+Após concluir o script, execute uma vez no banco recém-instalado:
 
-Esta configuração utiliza o servidor de desenvolvimento do Laravel e o Vite. Para produção, é necessário preparar uma imagem própria, compilar os assets e configurar um servidor de aplicação adequado.
+```sh
+docker compose exec app php artisan db:seed
+```
 
-## Falha de DNS durante a instalação
+Essa etapa cadastra os estados, as cidades e o usuário inicial. Não repita o comando em um banco que já contenha `test@example.com`, pois o seeder tenta criar esse usuário novamente.
 
-Se Composer ou npm retornarem `Could not resolve host` dentro do container, mas a internet funcionar no host Linux, você pode usar temporariamente a rede do host apenas para instalar as dependências:
+## 4. Acessar a aplicação
+
+Abra **http://localhost:8000** e entre com as credenciais de desenvolvimento:
+
+- **E-mail:** `test@example.com`
+- **Senha:** `password`
+
+A porta `5173` é usada pelo Vite e precisa permanecer disponível. A configuração fornecida destina-se ao ambiente local de desenvolvimento.
+
+## Problemas durante a instalação
+
+Se Composer ou npm apresentarem `Could not resolve host` dentro do container, mas a conexão funcionar no host Linux, execute:
 
 ```sh
 DEPENDENCY_NETWORK=host sh docker/setup.sh
 ```
 
-Os serviços da aplicação continuam na rede interna do Compose. Esse contorno foi necessário na instalação inicial deste computador.
+Essa opção usa a rede do host apenas para instalar as dependências.
+
+Se houver conflito nas portas `8000` ou `5173`, libere-as antes de executar novamente o script.
