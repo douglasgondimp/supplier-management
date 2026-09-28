@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\SupplierFiltersRequest;
 use App\Http\Requests\SupplierRequest;
 use App\Http\Resources\SupplierResource;
+use App\Models\Estado;
 use App\Models\Supplier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Arr;
@@ -20,10 +21,10 @@ class SupplierController extends Controller
         $search = trim($filters['search'] ?? '');
         $perPage = (int) ($filters['per_page'] ?? 10);
         $query = Supplier::with(['individual', 'corporate', 'emails', 'phones', 'contacts'])
-            ->when($search !== '', fn($query) => $query->textSearch($search));
+            ->when($search !== '', fn ($query) => $query->textSearch($search));
 
         $suppliers = $query->orderByDesc('id')->paginate($perPage)->withQueryString();
-        $suppliers->through(fn(Supplier $supplier) => (new SupplierResource($supplier))->resolve($request));
+        $suppliers->through(fn (Supplier $supplier) => (new SupplierResource($supplier))->resolve($request));
 
         return Inertia::render('suppliers/Index', [
             'suppliers' => $suppliers,
@@ -33,7 +34,7 @@ class SupplierController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('suppliers/Form', ['supplier' => null, 'readonly' => false]);
+        return Inertia::render('suppliers/Form', ['supplier' => null, 'readonly' => false, 'estados' => Estado::orderBy('nome')->get(['id', 'nome', 'sigla'])]);
     }
 
     public function show(Supplier $supplier): Response
@@ -43,6 +44,7 @@ class SupplierController extends Controller
         return Inertia::render('suppliers/Form', [
             'supplier' => (new SupplierResource($supplier))->resolve(),
             'readonly' => true,
+            'estados' => Estado::orderBy('nome')->get(['id', 'nome', 'sigla']),
         ]);
     }
 
@@ -53,6 +55,7 @@ class SupplierController extends Controller
         return Inertia::render('suppliers/Form', [
             'supplier' => (new SupplierResource($supplier))->resolve(),
             'readonly' => false,
+            'estados' => Estado::orderBy('nome')->get(['id', 'nome', 'sigla']),
         ]);
     }
 
@@ -85,7 +88,7 @@ class SupplierController extends Controller
                 $rows = $data[$relation];
                 if ($relation !== 'contacts') {
                     $field = $relation === 'emails' ? 'email' : 'phone_number';
-                    $rows = array_filter($rows, fn(array $row) => filled($row[$field] ?? null));
+                    $rows = array_filter($rows, fn (array $row) => filled($row[$field] ?? null));
                 }
                 $supplier->{$relation}()->createMany($rows);
             }
