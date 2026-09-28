@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { computed, nextTick, ref, watch } from 'vue';
+import SearchableSelect from '@/components/SearchableSelect.vue';
 import NoteEditor from '@/components/NoteEditor.vue';
 import MaskedInput from '@/components/MaskedInput.vue';
 import { Button } from '@/components/ui/button';
@@ -49,6 +50,7 @@ const defaults = {
 const props = defineProps<{
     supplier: (typeof defaults & { id: number }) | null;
     readonly: boolean;
+    estados: { id: number; nome: string; sigla: string }[];
 }>();
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Fornecedores', href: '/suppliers' }] },
@@ -67,6 +69,80 @@ const zipCodeLoading = ref(false);
 const zipCodeError = ref('');
 const cnpjLoading = ref(false);
 const cnpjError = ref('');
+
+const cities = ref<{ id: number; nome: string }[]>([]);
+const citiesLoading = ref(false);
+const citiesError = ref('');
+const stateOptions = computed(() =>
+    props.estados.map((state) => ({
+        value: state.sigla,
+        label: `${state.nome} (${state.sigla})`,
+    })),
+);
+const cityOptions = computed(() =>
+    cities.value.map((city) => ({ value: city.nome, label: city.nome })),
+);
+const normalizeCity = (value: string) =>
+    value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLocaleLowerCase('pt-BR');
+let citiesRequest: Promise<void> = Promise.resolve();
+
+watch(
+    () => form.state,
+    (state, previous, onCleanup) => {
+        const savedCity = previous === undefined ? form.city : '';
+        if (previous !== undefined) form.city = '';
+        cities.value = [];
+        citiesError.value = '';
+        citiesLoading.value = false;
+        const controller = new AbortController();
+        onCleanup(() => controller.abort());
+        if (!state || props.readonly) return;
+        citiesLoading.value = true;
+        citiesRequest = (async () => {
+            try {
+                await new Promise((resolve) => setTimeout(resolve, 300));
+                if (controller.signal.aborted) return;
+                const response = await fetch(
+                    `/api-data/estados/${encodeURIComponent(state)}/cidades`,
+                    {
+                        headers: { Accept: 'application/json' },
+                        signal: controller.signal,
+                    },
+                );
+                if (!response.ok)
+                    throw new Error(
+                        'Não foi possível carregar as cidades. Selecione o estado novamente para tentar.',
+                    );
+                const data = (await response.json()) as {
+                    id: number;
+                    nome: string;
+                }[];
+                if (controller.signal.aborted) return;
+                cities.value = data;
+                if (savedCity)
+                    form.city =
+                        data.find(
+                            (city) =>
+                                normalizeCity(city.nome) ===
+                                normalizeCity(savedCity),
+                        )?.nome ?? savedCity;
+            } catch (error) {
+                if (!controller.signal.aborted)
+                    citiesError.value =
+                        error instanceof Error
+                            ? error.message
+                            : 'Não foi possível carregar as cidades.';
+            } finally {
+                if (!controller.signal.aborted) citiesLoading.value = false;
+            }
+        })();
+    },
+    { immediate: true, flush: 'sync' },
+);
 
 watch(
     [
@@ -154,8 +230,26 @@ watch(
             form.street = address.street;
             form.complement = address.complement;
             form.neighborhood = address.neighborhood;
-            form.city = address.city;
+            if (!props.estados.some((state) => state.sigla === address.state)) {
+                throw new Error(
+                    'O estado retornado pelo CEP não foi encontrado no cadastro.',
+                );
+            }
+            form.city = '';
             form.state = address.state;
+            await citiesRequest;
+            if (controller.signal.aborted || form.state !== address.state)
+                return;
+            if (citiesError.value) throw new Error(citiesError.value);
+            const city = cities.value.find(
+                (city) =>
+                    normalizeCity(city.nome) === normalizeCity(address.city),
+            );
+            if (!city)
+                throw new Error(
+                    'A cidade retornada pelo CEP não foi encontrada neste estado. Selecione a cidade manualmente.',
+                );
+            form.city = city.nome;
         } catch (error) {
             if (!controller.signal.aborted) {
                 zipCodeError.value =
@@ -1004,51 +1098,50 @@ function submit() {
                             <label :for="'state'" class="text-sm font-medium"
                                 >UF
                                 <span class="text-destructive">*</span></label
-                            ><select
-                                :id="'state'"
+                            ><SearchableSelect
+                                id="state"
                                 v-model="form.state"
-                                :aria-invalid="!!errors['state']"
-                                class="h-9 w-full rounded-md border bg-background px-3"
-                            >
-                                <option value="">Selecione</option>
-                                <option value="AC">AC</option>
-                                <option value="AL">AL</option>
-                                <option value="AP">AP</option>
-                                <option value="AM">AM</option>
-                                <option value="BA">BA</option>
-                                <option value="CE">CE</option>
-                                <option value="DF">DF</option>
-                                <option value="ES">ES</option>
-                                <option value="GO">GO</option>
-                                <option value="MA">MA</option>
-                                <option value="MT">MT</option>
-                                <option value="MS">MS</option>
-                                <option value="MG">MG</option>
-                                <option value="PA">PA</option>
-                                <option value="PB">PB</option>
-                                <option value="PR">PR</option>
-                                <option value="PE">PE</option>
-                                <option value="PI">PI</option>
-                                <option value="RJ">RJ</option>
-                                <option value="RN">RN</option>
-                                <option value="RS">RS</option>
-                                <option value="RO">RO</option>
-                                <option value="RR">RR</option>
-                                <option value="SC">SC</option>
-                                <option value="SP">SP</option>
-                                <option value="SE">SE</option>
-                                <option value="TO">TO</option></select
-                            ><InputError :message="errors['state']" />
+                                :options="stateOptions"
+                                :disabled="
+                                    readonly ||
+                                    form.processing ||
+                                    zipCodeLoading
+                                "
+                                :invalid="!!errors['state']"
+                            /><InputError :message="errors['state']" />
                         </div>
                         <div class="space-y-2">
                             <label :for="'city'" class="text-sm font-medium"
                                 >Cidade
                                 <span class="text-destructive">*</span></label
-                            ><Input
-                                :id="'city'"
+                            ><SearchableSelect
+                                id="city"
                                 v-model="form.city"
-                                :aria-invalid="!!errors['city']"
+                                :options="cityOptions"
+                                :disabled="
+                                    readonly ||
+                                    form.processing ||
+                                    !form.state ||
+                                    citiesLoading ||
+                                    zipCodeLoading
+                                "
+                                :placeholder="
+                                    citiesLoading
+                                        ? 'Carregando cidades…'
+                                        : !form.state
+                                          ? 'Selecione um estado primeiro'
+                                          : 'Selecione ou pesquise'
+                                "
+                                :invalid="!!errors['city']"
                             /><InputError :message="errors['city']" />
+                            <p
+                                v-if="citiesLoading"
+                                role="status"
+                                class="text-sm text-muted-foreground"
+                            >
+                                Carregando cidades…
+                            </p>
+                            <InputError :message="citiesError" />
                         </div>
                     </div>
                     <label class="flex items-center gap-2"
