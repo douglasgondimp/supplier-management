@@ -9,6 +9,9 @@ x-app: &app
     volumes:
         - .:/var/www/html
     init: true
+    dns:
+        - 1.1.1.1
+        - 8.8.8.8
 
 services:
     app:
