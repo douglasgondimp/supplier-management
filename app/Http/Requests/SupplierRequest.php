@@ -10,6 +10,8 @@ use App\Enums\StateRegistrationIndicator;
 use App\Models\Supplier;
 use App\Rules\UniqueCNPJ;
 use App\Rules\UniqueCPF;
+use App\Rules\ValidCNPJ;
+use App\Rules\ValidCPF;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -73,12 +75,12 @@ class SupplierRequest extends FormRequest
         ];
 
         $fields = $this->input('type_person') === 'fisica' ? [
-            'individual.cpf' => ['bail', 'required', 'cpf', new UniqueCPF($supplier?->individual?->cpf)],
+            'individual.cpf' => ['bail', 'required', new ValidCPF, new UniqueCPF($supplier?->individual?->cpf)],
             'individual.name' => ['required', 'string', 'max:150'],
             'individual.surname' => ['nullable', 'string', 'max:255'],
             'individual.document_number' => ['required', 'string', 'max:15'],
         ] : [
-            'corporate.cnpj' => ['bail', 'required', 'cnpj', new UniqueCNPJ($supplier?->corporate?->cnpj)],
+            'corporate.cnpj' => ['bail', 'required', new ValidCNPJ, new UniqueCNPJ($supplier?->corporate?->cnpj)],
             'corporate.company_name' => ['required', 'string', 'max:255'],
             'corporate.fantasy_name' => ['required', 'string', 'max:255'],
             'corporate.state_registration_indicator' => ['required', Rule::enum(StateRegistrationIndicator::class)],
