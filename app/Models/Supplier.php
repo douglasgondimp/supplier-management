@@ -6,6 +6,7 @@ use App\Enums\PersonType;
 use App\Enums\PhoneType;
 use Database\Factories\SupplierFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -41,6 +42,17 @@ class Supplier extends Model
 {
     /** @use HasFactory<SupplierFactory> */
     use HasFactory, SoftDeletes;
+
+    protected static function booted(): void
+    {
+        static::updating(function (Supplier $supplier): void {
+            if ($supplier->isDirty('type_person')) {
+                throw new \DomainException(
+                    'O tipo de pessoa não pode ser alterado após o cadastro.'
+                );
+            }
+        });
+    }
 
     protected function casts(): array
     {
@@ -89,5 +101,30 @@ class Supplier extends Model
     public function contacts(): HasMany
     {
         return $this->hasMany(SupplierContact::class, 'supplier_id');
+    }
+
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeTextSearch(Builder $query, string $search): Builder
+    {
+        $document = preg_replace('/[^0-9]/', '', $search);
+
+        return $query->where(function ($query) use ($search, $document) {
+            $query->whereHas('individual', function ($person) use ($search, $document) {
+                $person->where('name', 'like', "%{$search}%")
+                    ->orWhere('surname', 'like', "%{$search}%");
+                if ($document !== '') {
+                    $person->orWhere('cpf', 'like', "%{$document}%");
+                }
+            })->orWhereHas('corporate', function ($person) use ($search, $document) {
+                $person->where('company_name', 'like', "%{$search}%")
+                    ->orWhere('fantasy_name', 'like', "%{$search}%");
+                if ($document !== '') {
+                    $person->orWhere('cnpj', 'like', "%{$document}%");
+                }
+            });
+        });
     }
 }
