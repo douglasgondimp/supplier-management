@@ -6,6 +6,7 @@ use App\Enums\Remittance;
 use App\Enums\StateRegistrationIndicator;
 use Database\Factories\SupplierCorporateFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -39,6 +40,13 @@ class SupplierCorporate extends Model
             'state_registration_indicator' => StateRegistrationIndicator::class,
             'remittance' => Remittance::class,
         ];
+    }
+
+    protected function cnpj(): Attribute
+    {
+        return Attribute::make(
+            set: fn(string $value) => preg_replace('/[^0-9]/', '', $value)
+        );
     }
 
     public function supplier(): BelongsTo
