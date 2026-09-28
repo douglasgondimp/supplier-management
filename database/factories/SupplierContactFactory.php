@@ -23,7 +23,7 @@ class SupplierContactFactory extends Factory
             'name' => fake('pt_BR')->name(),
             'company' => fake('pt_BR')->company(),
             'position' => fake()->randomElement(['Gerente', 'Diretor', 'Vendedor', 'Representante']),
-            'phone_number' => fake()->numerify('119########'),
+            'phone_number' =>  fake('pt_BR')->cellphoneNumber(),
             'phone_type' => PhoneType::CELULAR->value,
             'email' => fake()->safeEmail(),
             'email_type' => fake()->randomElement(EmailType::cases()),

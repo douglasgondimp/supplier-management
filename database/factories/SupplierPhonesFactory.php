@@ -19,7 +19,7 @@ class SupplierPhonesFactory extends Factory
     {
         return [
             'supplier_id' => Supplier::factory(),
-            'phone_number' => fake()->numerify('119########'),
+            'phone_number' =>  fake('pt_BR')->cellphoneNumber(),
             'phone_type' => PhoneType::CELULAR,
         ];
     }

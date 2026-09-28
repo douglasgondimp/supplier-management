@@ -18,7 +18,7 @@ class SupplierIndividualFactory extends Factory
     {
         return [
             'supplier_id' => Supplier::factory()->individual(),
-            'cpf' => fake('pt_BR')->cpf(false),
+            'cpf' => fake('pt_BR')->cpf(),
             'name' => fake('pt_BR')->name(),
             'surname' => fake('pt_BR')->lastName(),
             'document_number' => fake()->numerify('#########'),

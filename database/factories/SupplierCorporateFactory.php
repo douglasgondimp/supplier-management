@@ -20,7 +20,7 @@ class SupplierCorporateFactory extends Factory
     {
         return [
             'supplier_id' => Supplier::factory()->corporate(),
-            'cnpj' => fake('pt_BR')->cnpj(false),
+            'cnpj' => fake('pt_BR')->cnpj(),
             'company_name' => fake('pt_BR')->company(),
             'fantasy_name' => fake('pt_BR')->company(),
             'state_registration_indicator' => StateRegistrationIndicator::CONTRIBUINTE,

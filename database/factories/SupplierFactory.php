@@ -20,7 +20,7 @@ class SupplierFactory extends Factory
         return [
             'active' => true,
             'type_person' => PersonType::P_FISICA,
-            'phone_number' => fake()->numerify('119########'),
+            'phone_number' => fake('pt_BR')->cellphoneNumber(),
             'phone_type' => PhoneType::CELULAR,
             'zip_address' => fake('pt_BR')->postcode(),
             'street' => fake('pt_BR')->streetName(),
@@ -39,14 +39,14 @@ class SupplierFactory extends Factory
 
     public function individual(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn(array $attributes) => [
             'type_person' => PersonType::P_FISICA,
         ]);
     }
 
     public function corporate(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn(array $attributes) => [
             'type_person' => PersonType::P_JURIDICA,
         ]);
     }
